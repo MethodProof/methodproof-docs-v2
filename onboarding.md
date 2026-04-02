@@ -167,6 +167,63 @@ npm run build
 
 ---
 
+## CI/CD
+
+Each sub-repo has its own GitHub Actions workflows in `.github/workflows/`. Push to `main` triggers the relevant pipeline automatically.
+
+| Repo | Pipeline | Trigger |
+|------|----------|---------|
+| `methodproof-platform` | test → build Docker → push ECR → deploy ECS | push to `main` |
+| `methodproof-dashboard` | build → S3 sync → CloudFront invalidation | push to `main` |
+| `methodproof-portal` | build → S3 sync → CloudFront invalidation | push to `main` |
+| `methodproof-cli` | test on push; publish to PyPI on `v*` tag | push / tag |
+| `methodproof-runtime` | test on push; publish to GHCR on `v*` tag | push / tag |
+| `methodproof-extension` | test only | push |
+| `methodproof-narration` | test only | push |
+| `methodproof-graph` | test only | push |
+
+All AWS deploys use GitHub Actions OIDC — no long-lived AWS keys. The OIDC trust policy is expanded to allow each sub-repo to assume the deploy role.
+
+**Database migrations are not automatic.** Run `just prod-migrate` manually before deploying schema changes.
+
+---
+
+## OAuth Setup
+
+To enable GitHub and Google login, set the following in your `.env`:
+
+```
+GITHUB_CLIENT_ID=<from GitHub OAuth app>
+GITHUB_CLIENT_SECRET=<from GitHub OAuth app>
+GOOGLE_CLIENT_ID=<from Google Cloud Console>
+GOOGLE_CLIENT_SECRET=<from Google Cloud Console>
+```
+
+The backend mediates the OAuth flow. Mobile clients receive a deep link redirect after authentication. Email/password signup now requires email verification via Postmark (in dev mode, verification links are logged to stdout).
+
+---
+
+## Production Operations
+
+The platform `justfile` includes recipes for common production tasks. All database access goes through SSM tunnels — no direct exposure.
+
+| Recipe | Description |
+|--------|-------------|
+| `just prod-tunnel` | SSM port-forward through Neo4j EC2 to RDS |
+| `just prod-migrate` | Run Alembic migrations through the tunnel |
+| `just prod-psql` | Interactive `psql` session via tunnel |
+| `just prod-db-version` | Check current Alembic migration version |
+| `just prod-neo4j-shell` | SSM shell into Neo4j EC2 instance |
+| `just prod-deploy-force` | Force ECS redeployment |
+| `just prod-logs` | Tail CloudWatch logs |
+| `just prod-status` | Show ECS + RDS status |
+| `just deploy-platform` | Push to trigger platform CI/CD |
+| `just deploy-dashboard` | Push to trigger dashboard CI/CD |
+| `just deploy-portal` | Push to trigger portal CI/CD |
+| `just deploy-all` | Push all repos |
+
+---
+
 ## Troubleshooting
 
 ### Neo4j connection refused

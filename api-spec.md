@@ -71,6 +71,73 @@ curl -X POST http://localhost:8000/auth/login \
   -d '{"email":"admin@acme.com","password":"s3cureP@ss"}'
 ```
 
+### POST /auth/oauth/github
+
+Initiate GitHub OAuth login. Backend redirects to GitHub, exchanges the code, and returns a JWT. Mobile clients receive a deep link redirect.
+
+**Response (200):**
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiIs...",
+  "user": {
+    "id": "uuid",
+    "email": "user@example.com",
+    "role": "user",
+    "auth_provider": "github"
+  }
+}
+```
+
+### POST /auth/oauth/google
+
+Initiate Google OAuth login. Same flow as GitHub.
+
+**Response (200):**
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiIs...",
+  "user": {
+    "id": "uuid",
+    "email": "user@example.com",
+    "role": "user",
+    "auth_provider": "google"
+  }
+}
+```
+
+### GET /auth/verify-email
+
+Verify email address from a registration or resend link.
+
+**Query params:** `token` (required, verification token from email)
+
+**Response (200):**
+```json
+{
+  "message": "Email verified"
+}
+```
+
+**Error (400):** Invalid or expired token.
+
+### POST /auth/resend-verification
+
+Resend email verification link. Requires authentication.
+
+**Request:**
+```json
+{
+  "email": "user@example.com"
+}
+```
+
+**Response (200):**
+```json
+{
+  "message": "Verification email sent"
+}
+```
+
 ### POST /auth/sso/saml
 
 Enterprise SSO callback (Wave 6).
@@ -638,6 +705,142 @@ List registered webhooks for company.
 Remove webhook. Returns `204`.
 
 **Webhook delivery:** On event, payload is signed with HMAC-SHA256 using the webhook secret. Signature sent in `X-MethodProof-Signature` header. Retries: 1s, 5s, 30s (max 3 attempts).
+
+---
+
+## Integrity Verification
+
+### GET /sessions/:id/chain/verify
+
+Verify the SHA-256 hash chain for a session's event stream. Returns whether the chain is intact or where it broke.
+
+**Response (200):**
+```json
+{
+  "session_id": "uuid",
+  "chain_valid": true,
+  "event_count": 142,
+  "first_hash": "a1b2c3...",
+  "last_hash": "d4e5f6..."
+}
+```
+
+### GET /sessions/:id/integrity
+
+Full integrity report combining all verification layers: hash chain, attestation, anomaly detection, git cross-reference, and binary verification.
+
+**Response (200):**
+```json
+{
+  "session_id": "uuid",
+  "integrity_score": 0.95,
+  "chain": {"valid": true, "event_count": 142},
+  "attestation": {"signed": true, "key_fingerprint": "abc123..."},
+  "anomaly_checks": {"timing_consistent": true, "event_density_normal": true, "no_bulk_insert": true, "clock_monotonic": true, "no_impossible_gaps": true},
+  "git_verified": true,
+  "binary_known": true
+}
+```
+
+### GET /sessions/:id/git-verification
+
+Cross-reference session git commits against the GitHub API.
+
+**Response (200):**
+```json
+{
+  "session_id": "uuid",
+  "commits_claimed": 5,
+  "commits_verified": 5,
+  "mismatches": []
+}
+```
+
+### POST /sessions/:id/attestation
+
+Submit an Ed25519 signed attestation for a session (called by CLI on push).
+
+**Request:**
+```json
+{
+  "signature": "base64-encoded-ed25519-signature",
+  "summary_hash": "sha256-of-session-summary",
+  "public_key_fingerprint": "abc123..."
+}
+```
+
+**Response (201):**
+```json
+{
+  "accepted": true
+}
+```
+
+---
+
+## CLI Releases
+
+### POST /cli/releases
+
+Register a new CLI release with its binary hash (admin only).
+
+**Request:**
+```json
+{
+  "version": "0.4.2",
+  "binary_hash": "sha256:abc123...",
+  "platform": "linux-x86_64"
+}
+```
+
+**Response (201):**
+```json
+{
+  "version": "0.4.2",
+  "created_at": "2026-04-01T12:00:00Z"
+}
+```
+
+### GET /cli/releases
+
+List all known CLI releases and their binary hashes. No auth required.
+
+**Response (200):**
+```json
+{
+  "releases": [
+    {"version": "0.4.2", "binary_hash": "sha256:abc123...", "platform": "linux-x86_64", "created_at": "2026-04-01T12:00:00Z"}
+  ]
+}
+```
+
+### GET /cli/releases/:version
+
+Get a specific release by version.
+
+---
+
+## Signing Keys
+
+### POST /personal/signing-keys
+
+Register an Ed25519 public key for session attestation. Called by the CLI on first push.
+
+**Request:**
+```json
+{
+  "public_key": "base64-encoded-ed25519-public-key",
+  "fingerprint": "sha256-of-public-key"
+}
+```
+
+**Response (201):**
+```json
+{
+  "fingerprint": "sha256-of-public-key",
+  "registered_at": "2026-04-01T12:00:00Z"
+}
+```
 
 ---
 
