@@ -58,7 +58,7 @@
 |----------|----------|----------|------------|-------------|
 | Run application | FULL | Terminal Monitor | Command, exit code, truncated output (10KB) | Full output if >10KB |
 | Run tests | FULL | Terminal Monitor | Command, framework detection (pytest/jest/go test/cargo test), pass/fail counts, duration | Individual test names (in truncated output) |
-| Git commands | FULL | Terminal Monitor + FS Watcher | Command + exit code. Commits also detected via `.git/refs` polling (hash, message, changed files). | — |
+| Git commands | FULL | Terminal Monitor + FS Watcher | Command + exit code. Commits detected via `.git/refs` polling (hash, message, changed files). **Community challenges only:** full unified diff per commit (capped 50 KB, AES-256-GCM encrypted). **All other contexts (CLI, regular sessions):** structural only (no diff content). | — |
 | Package install (npm, pip, cargo) | FULL | Terminal Monitor | Command + exit code | Package contents |
 | Docker commands | FULL | Terminal Monitor | Command + exit code | Container-internal state changes |
 | Build / lint / typecheck | FULL | Terminal Monitor | Command + exit code + truncated output | Full warning/error list if output exceeds 10KB |
@@ -171,7 +171,7 @@ Someone copies a function from ChatGPT and pastes it into their editor. We see b
 | Agent | What It Covers Well | Key Gaps |
 |-------|-------------------|----------|
 | **MCP Server** | LLM calls routed through our server | Only captures AI usage that goes through our MCP — most real-world tools don't |
-| **FS Watcher** | All file changes with diffs, language detection, git commits | Can't attribute changes to AI vs manual. No visibility into file reading. |
+| **FS Watcher** | All file changes with diffs, language detection, git commits. **Community challenges only:** full git diffs per commit (encrypted). **All other contexts:** structural only. | Can't attribute changes to AI vs manual. No visibility into file reading. |
 | **Terminal Monitor** | Commands, exit codes, test detection, truncated output | Interactive REPL sessions. Full output of verbose commands. |
 | **Network Proxy** | All HTTP(S) traffic from the environment | Encrypted payloads need per-API decoders. High traffic volume requires filtering. |
 | **Screen Capture** | Periodic visual record of the environment | Expensive to store. Expensive to process for semantic content. |
