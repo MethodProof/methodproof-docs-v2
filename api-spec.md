@@ -437,7 +437,9 @@ Batch telemetry events from the container.
 }
 ```
 
-Rate limit: 100 events per batch, 10 batches per minute per session.
+Rate limit: 500 events per batch, 60 batches per minute per session.
+
+Supports `Content-Encoding: gzip` on request bodies. CLI >=0.8.0 sends gzip by default.
 
 ### POST /sessions/:id/screenshots
 
